@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
   { name = "alchemmist", email = "anton.ingrish@gmail.com" },
   { name = "Alex Smirnov", email = "alekssmir411@gmail.com" },
-  { name = "vitawild" },
+  { name = "vitawild", email = "wildvita@yandex.ru" },
 ]
 requires-python = ">=3.12"
 dependencies = []
