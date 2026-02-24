@@ -25,8 +25,11 @@ include = ["src/contriboo/py.typed"]
 
 [dependency-groups]
 dev = [
-  "mypy>=1.19.1",
-  "pytest>=9.0.2",
+    "bandit>=1.9.3",
+ "mypy>=1.19.1",
+ "pip-audit>=2.10.0",
+ "pytest>=9.0.2",
+ "pytest-cov>=7.0.0",
 ]
 
 [tool.mypy]

@@ -1,4 +1,4 @@
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Iterable
 
@@ -135,7 +135,7 @@ class GitGateway(GitHistoryGateway):
             GitOperationError: If command exits with non-zero code.
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 command,
                 cwd=str(cwd) if cwd else None,
                 capture_output=True,
