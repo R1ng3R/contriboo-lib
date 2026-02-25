@@ -1,0 +1,13 @@
+name: markdownlint
+
+on:
+  pull_request:
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DavidAnson/markdownlint-cli2-action@v22
+        with:
+          fix: false
