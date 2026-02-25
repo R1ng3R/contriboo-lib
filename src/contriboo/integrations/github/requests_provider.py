@@ -219,3 +219,34 @@ class GitHubProvider(ProfileRepositoryProvider):
         raise GitHubRateLimitError(
             f"GitHub rate limit exceeded. Wait about {max(wait_seconds, 0)}s or use token."
         )
+
+    def count_followers(self, username: str) -> int:
+        """Count the number of followers for a given user.
+
+        Args:
+            username: The username of the user.
+
+        Returns:
+            int: The number of followers.
+
+        Raises:
+            GitHubApiError: If request fails with non-rate-limit HTTP error.
+            GitHubConnectionError: If network/DNS failures persist after retries.
+            GitHubRateLimitError: If hard rate-limit was reached.
+        """
+        raw_payload = self._get_json(path=f"/users/{username}", params={})
+
+        if not isinstance(raw_payload, dict):
+            raise GitHubResponseSchemaError(
+                "GitHub API returned non-object response for user data"
+            )
+
+        followers_count = raw_payload.get("followers", 0)
+
+        if not isinstance(followers_count, int):
+            raise GitHubResponseSchemaError(
+                "GitHub API returned invalid followers count"
+            )
+
+        return followers_count
+
