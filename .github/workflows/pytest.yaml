@@ -19,4 +19,4 @@ jobs:
       - name: Run pytest
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-          make test
+          uv run pytest -q
