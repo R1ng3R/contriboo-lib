@@ -158,7 +158,7 @@ class GitGateway(GitHistoryGateway):
         """
         self._validate_command(command)
         try:
-            result = subprocess.run( # noqa: S603
+            result = subprocess.run(  # nosec: B603  # noqa: S603
                 command,
                 cwd=str(cwd) if cwd else None,
                 capture_output=True,
