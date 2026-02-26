@@ -1,3 +1,5 @@
+"""Profile-analysis domain types and services."""
+
 from .models import ProfileCommitCountResult, RepositoryCommitCount
 from .service import ProfileAnalysisService
 from .types import DaysRange

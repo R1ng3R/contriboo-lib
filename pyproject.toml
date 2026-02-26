@@ -37,3 +37,10 @@ dev = [
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D203", "D212", "COM812", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D", "INP001", "ARG001", "ARG002"]

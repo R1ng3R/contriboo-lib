@@ -1,9 +1,15 @@
+"""Minimal example of running profile commit counting."""
+
+import logging
 import os
 
 from contriboo import ContribooClient, ContribooSettings
 
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     settings = ContribooSettings(github_token=os.getenv("GITHUB_TOKEN"))
     client = ContribooClient(settings=settings)
 
@@ -18,4 +24,9 @@ if __name__ == "__main__":
         show_progress=True,
     )
 
-    print(f"Total commits by {username} for period={days}: {result.total_commits}")
+    logger.info(
+        "Total commits by %s for period=%s: %s",
+        username,
+        days,
+        result.total_commits,
+    )
