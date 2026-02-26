@@ -123,7 +123,7 @@ class GitHubProvider(ProfileRepositoryProvider):
         """
         if days == "all":
             return f"author:{username}"
-        if isinstance(days, bool) or days <= 0:
+        if not isinstance(days, int) or days <= 0:
             raise InvalidDaysRangeError.must_be_positive_or_all()
 
         since = (
