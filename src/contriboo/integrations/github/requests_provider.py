@@ -229,7 +229,12 @@ class GitHubProvider(ProfileRepositoryProvider):
         ):
             return False
 
-        wait_seconds = int(reset) - int(time.time()) + 1
+        try:
+            reset_timestamp = int(reset)
+        except ValueError:
+            return False
+
+        wait_seconds = reset_timestamp - int(time.time()) + 1
         if 0 < wait_seconds <= LOCAL_RATE_LIMIT_RETRY_WINDOW_SEC:
             time.sleep(wait_seconds)
             return True
