@@ -1,5 +1,6 @@
 """Typed exception hierarchy used across contriboo modules."""
 
+
 class ContribooError(Exception):
     """Base exception for contriboo."""
 

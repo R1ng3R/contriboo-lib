@@ -242,7 +242,8 @@ class GitHubProvider(ProfileRepositoryProvider):
         raise GitHubRateLimitError.exceeded(wait_seconds)
 
     def count_followers(self, username: str) -> int:
-        """Count the number of followers for a given user.
+        """
+        Count the number of followers for a given user.
 
         Args:
             username: The username of the user.
@@ -254,6 +255,7 @@ class GitHubProvider(ProfileRepositoryProvider):
             GitHubApiError: If request fails with non-rate-limit HTTP error.
             GitHubConnectionError: If network/DNS failures persist after retries.
             GitHubRateLimitError: If hard rate-limit was reached.
+
         """
         raw_payload = self._get_json(path=f"/users/{username}", params={})
 
