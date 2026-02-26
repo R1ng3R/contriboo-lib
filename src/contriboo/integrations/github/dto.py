@@ -1,3 +1,5 @@
+"""Pydantic DTOs matching GitHub commit-search API response schema."""
+
 from pydantic import BaseModel, Field
 
 

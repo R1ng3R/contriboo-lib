@@ -1,0 +1,23 @@
+name: security
+
+on:
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Run bandit
+        run: uv run bandit -r src/
+
+      - name: Run pip-audit
+        run: uv run pip-audit

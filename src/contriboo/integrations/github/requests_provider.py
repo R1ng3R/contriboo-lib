@@ -1,6 +1,7 @@
+"""GitHub API repository provider based on ``requests`` transport."""
+
 import datetime
 import time
-from typing import TypeAlias
 
 import requests
 
@@ -17,24 +18,27 @@ from contriboo.repository_name import RepositoryName
 
 from .dto import GitHubCommitSearchResponseDTO
 
-RequestScalar: TypeAlias = str | bytes | int | float
-RequestValue: TypeAlias = (
+type RequestScalar = str | bytes | int | float
+type RequestValue = (
     RequestScalar | list[RequestScalar] | tuple[RequestScalar, ...] | None
 )
-RequestParams: TypeAlias = dict[str, RequestValue]
+type RequestParams = dict[str, RequestValue]
+
+GITHUB_RATE_LIMIT_STATUS = 403
+LOCAL_RATE_LIMIT_RETRY_WINDOW_SEC = 60
 
 
 class GitHubProvider(ProfileRepositoryProvider):
     """GitHub repository provider based on `requests` client."""
 
     __slots__ = (
-        "_token",
         "_base_url",
-        "_timeout_sec",
+        "_max_search_pages",
         "_retries",
         "_retry_delay_sec",
-        "_max_search_pages",
         "_session",
+        "_timeout_sec",
+        "_token",
     )
 
     def __init__(
@@ -47,7 +51,8 @@ class GitHubProvider(ProfileRepositoryProvider):
         session: requests.Session | None = None,
         base_url: str = "https://api.github.com",
     ) -> None:
-        """Initialize provider.
+        """
+        Initialize provider.
 
         Args:
             token: Optional GitHub token for authenticated requests.
@@ -57,6 +62,7 @@ class GitHubProvider(ProfileRepositoryProvider):
             max_search_pages: Max commit-search pages to read.
             session: Optional preconfigured requests session.
             base_url: GitHub API base URL.
+
         """
         self._token = token
         self._base_url = base_url.rstrip("/")
@@ -67,9 +73,12 @@ class GitHubProvider(ProfileRepositoryProvider):
         self._session = session or requests.Session()
 
     def find_repositories_for_author(
-        self, username: str, days: DaysRange
+        self,
+        username: str,
+        days: DaysRange,
     ) -> list[RepositoryName]:
-        """Return unique repositories where author has activity.
+        """
+        Return unique repositories where author has activity.
 
         Args:
             username: GitHub username used in search query.
@@ -77,6 +86,7 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         Returns:
             list[RepositoryName]: Unique repository identifiers.
+
         """
         query = self._build_query(username=username, days=days)
 
@@ -97,7 +107,8 @@ class GitHubProvider(ProfileRepositoryProvider):
         return list(repositories.keys())
 
     def _build_query(self, username: str, days: DaysRange) -> str:
-        """Build GitHub commit-search query string.
+        """
+        Build GitHub commit-search query string.
 
         Args:
             username: GitHub username.
@@ -108,11 +119,12 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         Raises:
             InvalidDaysRangeError: If `days` value is invalid.
+
         """
         if days == "all":
             return f"author:{username}"
-        if isinstance(days, bool) or days <= 0:
-            raise InvalidDaysRangeError("days must be > 0 or 'all'")
+        if not isinstance(days, int) or days <= 0:
+            raise InvalidDaysRangeError.must_be_positive_or_all()
 
         since = (
             datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=days)
@@ -124,7 +136,8 @@ class GitHubProvider(ProfileRepositoryProvider):
         path: str,
         params: RequestParams,
     ) -> GitHubCommitSearchResponseDTO:
-        """Fetch and parse one page of commit-search response.
+        """
+        Fetch and parse one page of commit-search response.
 
         Args:
             path: API path part.
@@ -132,12 +145,14 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         Returns:
             GitHubCommitSearchResponseDTO: Parsed page DTO.
+
         """
         raw_payload = self._get_json(path=path, params=params)
         return GitHubCommitSearchResponseDTO.model_validate(raw_payload)
 
     def _get_json(self, path: str, params: RequestParams) -> dict[str, object]:
-        """Perform GET request and return JSON object payload.
+        """
+        Perform GET request and return JSON object payload.
 
         Args:
             path: API path part.
@@ -151,6 +166,7 @@ class GitHubProvider(ProfileRepositoryProvider):
             GitHubApiError: If request fails with non-rate-limit HTTP error.
             GitHubConnectionError: If network/DNS failures persist after retries.
             GitHubRateLimitError: If hard rate-limit was reached.
+
         """
         url = f"{self._base_url}{path}"
         headers = {
@@ -171,27 +187,24 @@ class GitHubProvider(ProfileRepositoryProvider):
                 response.raise_for_status()
                 raw_json = response.json()
                 if not isinstance(raw_json, dict):
-                    raise GitHubResponseSchemaError(
-                        "GitHub API returned non-object response"
-                    )
-                return raw_json
+                    raise GitHubResponseSchemaError.non_object()
             except requests.HTTPError as exc:
                 if self._handle_rate_limit(exc):
                     continue
-                raise GitHubApiError("GitHub API request failed") from exc
+                raise GitHubApiError.request_failed() from exc
             except (requests.ConnectionError, requests.Timeout) as exc:
                 if attempt < self._retries:
                     time.sleep(self._retry_delay_sec)
                     continue
-                raise GitHubConnectionError(
-                    "GitHub API is unreachable (DNS/network issue). "
-                    "Check internet/VPN/DNS and try again."
-                ) from exc
+                raise GitHubConnectionError.unreachable() from exc
+            else:
+                return raw_json
 
-        raise GitHubApiError("GitHub API request failed")
+        raise GitHubApiError.request_failed()
 
     def _handle_rate_limit(self, exc: requests.HTTPError) -> bool:
-        """Handle GitHub rate-limit HTTP error.
+        """
+        Handle GitHub rate-limit HTTP error.
 
         Args:
             exc: HTTPError raised by `requests`.
@@ -201,6 +214,7 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         Raises:
             GitHubRateLimitError: If reset wait time is too long for local retry.
+
         """
         response = exc.response
         if response is None:
@@ -208,17 +222,24 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         remaining = response.headers.get("X-RateLimit-Remaining")
         reset = response.headers.get("X-RateLimit-Reset")
-        if response.status_code != 403 or remaining != "0" or reset is None:
+        if (
+            response.status_code != GITHUB_RATE_LIMIT_STATUS
+            or remaining != "0"
+            or reset is None
+        ):
             return False
 
-        wait_seconds = int(reset) - int(time.time()) + 1
-        if 0 < wait_seconds <= 60:
+        try:
+            reset_timestamp = int(reset)
+        except (ValueError, TypeError):
+            return False
+
+        wait_seconds = reset_timestamp - int(time.time()) + 1
+        if 0 < wait_seconds <= LOCAL_RATE_LIMIT_RETRY_WINDOW_SEC:
             time.sleep(wait_seconds)
             return True
 
-        raise GitHubRateLimitError(
-            f"GitHub rate limit exceeded. Wait about {max(wait_seconds, 0)}s or use token."
-        )
+        raise GitHubRateLimitError.exceeded(wait_seconds)
 
     def count_followers(self, username: str) -> int:
         """Count the number of followers for a given user.
@@ -249,4 +270,3 @@ class GitHubProvider(ProfileRepositoryProvider):
             )
 
         return followers_count
-

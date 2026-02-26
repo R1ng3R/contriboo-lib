@@ -1,19 +1,25 @@
+"""Application service for profile commit counting use-case."""
+
 import datetime
+import logging
 import tempfile
 from pathlib import Path
+from typing import Literal
 
-from contriboo.exceptions import InvalidDaysRangeError
+from contriboo.exceptions import ContribooError, InvalidDaysRangeError
 from contriboo.repository_name import RepositoryName
 
 from .interfaces import GitHistoryGateway, ProfileRepositoryProvider
-from .models import ProfileCommitCountResult, RepositoryCommitCount
+from .models import CommitSignature, ProfileCommitCountResult, RepositoryCommitCount
 from .types import DaysRange
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileAnalysisService:
     """Application service for developer-profile commit analytics."""
 
-    __slots__ = ("_repository_provider", "_git_gateway", "_workspace_dir")
+    __slots__ = ("_git_gateway", "_repository_provider", "_workspace_dir")
 
     def __init__(
         self,
@@ -21,12 +27,14 @@ class ProfileAnalysisService:
         git_gateway: GitHistoryGateway,
         workspace_dir: Path | None = None,
     ) -> None:
-        """Create profile analysis service.
+        """
+        Create profile analysis service.
 
         Args:
             repository_provider: Provider that returns profile-related repositories.
             git_gateway: Gateway for git clone/history operations.
             workspace_dir: Optional directory for temporary clone workspace.
+
         """
         self._repository_provider = repository_provider
         self._git_gateway = git_gateway
@@ -37,9 +45,11 @@ class ProfileAnalysisService:
         username: str,
         email: str | None,
         days: DaysRange,
+        *,
         show_progress: bool = False,
     ) -> ProfileCommitCountResult:
-        """Count total commits for one developer profile.
+        """
+        Count total commits for one developer profile.
 
         Args:
             username: Username used for repository discovery and signature matching.
@@ -49,6 +59,7 @@ class ProfileAnalysisService:
 
         Returns:
             ProfileCommitCountResult: Aggregated and per-repository counting result.
+
         """
         self._validate_days(days)
         started_at = datetime.datetime.now(datetime.UTC)
@@ -61,7 +72,8 @@ class ProfileAnalysisService:
             return self._empty_result(started_at)
 
         normalized_username, normalized_email = self._normalize_identity(
-            username, email
+            username,
+            email,
         )
         repo_results = self._scan_repositories(
             repositories=repositories,
@@ -76,9 +88,11 @@ class ProfileAnalysisService:
         repositories: list[RepositoryName],
         normalized_username: str,
         normalized_email: str,
+        *,
         show_progress: bool,
     ) -> list[RepositoryCommitCount]:
-        """Scan all repositories and collect per-repository results.
+        """
+        Scan all repositories and collect per-repository results.
 
         Args:
             repositories: Repositories to clone and inspect.
@@ -88,18 +102,24 @@ class ProfileAnalysisService:
 
         Returns:
             list[RepositoryCommitCount]: One result entry per repository.
+
         """
         results: list[RepositoryCommitCount] = []
 
         with tempfile.TemporaryDirectory(
-            prefix="contriboo-", dir=self._workspace_dir
+            prefix="contriboo-",
+            dir=self._workspace_dir,
         ) as tmp_dir:
             target_root = Path(tmp_dir)
             total = len(repositories)
 
             for index, repository_name in enumerate(repositories, start=1):
                 if show_progress:
-                    print(f"[{index}/{total}] cloning {repository_name} ...")
+                    self._emit_repository_start(
+                        repository_name=repository_name,
+                        index=index,
+                        total=total,
+                    )
 
                 result = self._scan_single_repository(
                     repository_name=repository_name,
@@ -122,9 +142,11 @@ class ProfileAnalysisService:
         normalized_email: str,
         index: int,
         total: int,
+        *,
         show_progress: bool,
     ) -> RepositoryCommitCount:
-        """Process one repository and return result entry.
+        """
+        Process one repository and return result entry.
 
         Args:
             repository_name: Repository identifier to process.
@@ -137,13 +159,20 @@ class ProfileAnalysisService:
 
         Returns:
             RepositoryCommitCount: Result record for this repository.
+
         """
         try:
             repo_dir = self._git_gateway.clone_repository(repository_name, target_root)
             branch = self._git_gateway.resolve_mainline_branch(repo_dir)
             if branch is None:
                 if show_progress:
-                    print(f"[{index}/{total}] skip {repository_name}: no main/master")
+                    self._emit_repository_result(
+                        repository_name=repository_name,
+                        index=index,
+                        total=total,
+                        status="skipped",
+                        message="main/master branch not found",
+                    )
                 return RepositoryCommitCount(
                     full_name=repository_name,
                     branch=None,
@@ -159,16 +188,28 @@ class ProfileAnalysisService:
                 normalized_email=normalized_email,
             )
             if show_progress:
-                print(f"[{index}/{total}] {repository_name}: +{commit_count}")
+                self._emit_repository_result(
+                    repository_name=repository_name,
+                    index=index,
+                    total=total,
+                    status="ok",
+                    message=f"{commit_count} matching commits",
+                )
             return RepositoryCommitCount(
                 full_name=repository_name,
                 branch=branch,
                 commit_count=commit_count,
                 status="ok",
             )
-        except Exception as exc:
+        except ContribooError as exc:
             if show_progress:
-                print(f"[{index}/{total}] skip {repository_name}: {exc}")
+                self._emit_repository_result(
+                    repository_name=repository_name,
+                    index=index,
+                    total=total,
+                    status="skipped",
+                    message=str(exc),
+                )
             return RepositoryCommitCount(
                 full_name=repository_name,
                 branch=None,
@@ -184,7 +225,8 @@ class ProfileAnalysisService:
         normalized_username: str,
         normalized_email: str,
     ) -> int:
-        """Count matching commits inside one local repository branch.
+        """
+        Count matching commits inside one local repository branch.
 
         Args:
             repo_dir: Local repository path.
@@ -194,20 +236,25 @@ class ProfileAnalysisService:
 
         Returns:
             int: Number of commits matching by email or username.
+
         """
         commit_count = 0
         for signature in self._git_gateway.iter_commit_signatures(repo_dir, branch):
+            (
+                author_name,
+                committer_name,
+                author_email,
+                committer_email,
+            ) = self._normalize_signature(signature)
             matches_email = normalized_email and (
-                signature.author_email == normalized_email
-                or signature.committer_email == normalized_email
+                normalized_email in (author_email, committer_email)
             )
             if matches_email:
                 commit_count += 1
                 continue
 
             matches_username = normalized_username and (
-                signature.author_name == normalized_username
-                or signature.committer_name == normalized_username
+                normalized_username in (author_name, committer_name)
             )
             if matches_username:
                 commit_count += 1
@@ -220,7 +267,8 @@ class ProfileAnalysisService:
         repositories: list[RepositoryName],
         repo_results: list[RepositoryCommitCount],
     ) -> ProfileCommitCountResult:
-        """Build final aggregate result from per-repository records.
+        """
+        Build final aggregate result from per-repository records.
 
         Args:
             started_at: UTC timestamp when operation started.
@@ -229,6 +277,7 @@ class ProfileAnalysisService:
 
         Returns:
             ProfileCommitCountResult: Final aggregate result object.
+
         """
         finished_at = datetime.datetime.now(datetime.UTC)
         total_commits = sum(item.commit_count for item in repo_results)
@@ -244,13 +293,15 @@ class ProfileAnalysisService:
         )
 
     def _empty_result(self, started_at: datetime.datetime) -> ProfileCommitCountResult:
-        """Build empty aggregate result when no repositories found.
+        """
+        Build empty aggregate result when no repositories found.
 
         Args:
             started_at: UTC timestamp when operation started.
 
         Returns:
             ProfileCommitCountResult: Empty result object with zero counters.
+
         """
         finished_at = datetime.datetime.now(datetime.UTC)
         return ProfileCommitCountResult(
@@ -263,7 +314,8 @@ class ProfileAnalysisService:
         )
 
     def _normalize_identity(self, username: str, email: str | None) -> tuple[str, str]:
-        """Normalize username/email for case-insensitive matching.
+        """
+        Normalize username/email for case-insensitive matching.
 
         Args:
             username: Raw username value.
@@ -271,19 +323,89 @@ class ProfileAnalysisService:
 
         Returns:
             tuple[str, str]: Normalized `(username, email)` values.
+
         """
         return username.strip().lower(), (email or "").strip().lower()
 
     def _validate_days(self, days: DaysRange) -> None:
-        """Validate period argument.
+        """
+        Validate period argument.
 
         Args:
             days: Positive day count or `"all"`.
 
         Raises:
             InvalidDaysRangeError: If value is neither `"all"` nor positive integer.
+
         """
         if days == "all":
             return
         if isinstance(days, bool) or not isinstance(days, int) or days <= 0:
-            raise InvalidDaysRangeError("days must be positive int or 'all'")
+            raise InvalidDaysRangeError.must_be_positive_int_or_all()
+
+    def _normalize_signature(
+        self,
+        signature: CommitSignature,
+    ) -> tuple[str, str, str, str]:
+        """
+        Normalize commit signature fields for case-insensitive matching.
+
+        Args:
+            signature: Raw commit signature from git history.
+
+        Returns:
+            tuple[str, str, str, str]: Normalized author/committer
+            names and emails.
+
+        """
+        return (
+            (signature.author_name or "").strip().lower(),
+            (signature.committer_name or "").strip().lower(),
+            (signature.author_email or "").strip().lower(),
+            (signature.committer_email or "").strip().lower(),
+        )
+
+    def _emit_repository_start(
+        self,
+        repository_name: RepositoryName,
+        index: int,
+        total: int,
+    ) -> None:
+        """
+        Print scan-start progress line for one repository.
+
+        Args:
+            repository_name: Repository currently being scanned.
+            index: 1-based repository position.
+            total: Total number of repositories.
+
+        """
+        logger.info("[%s/%s] scanning %s", index, total, repository_name)
+
+    def _emit_repository_result(
+        self,
+        repository_name: RepositoryName,
+        index: int,
+        total: int,
+        status: Literal["ok", "skipped"],
+        message: str,
+    ) -> None:
+        """
+        Print scan-result progress line for one repository.
+
+        Args:
+            repository_name: Repository that finished processing.
+            index: 1-based repository position.
+            total: Total number of repositories.
+            status: Result status label.
+            message: Short result details for the user.
+
+        """
+        logger.info(
+            "[%s/%s] %s %s: %s",
+            index,
+            total,
+            status,
+            repository_name,
+            message,
+        )

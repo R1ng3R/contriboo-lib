@@ -1,3 +1,5 @@
+"""Domain result models for profile commit analysis."""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -7,13 +9,15 @@ from contriboo.repository_name import RepositoryName
 
 @dataclass(frozen=True, slots=True)
 class CommitSignature:
-    """Author/committer identity snapshot for one commit.
+    """
+    Author/committer identity snapshot for one commit.
 
     Attributes:
         author_email: Author email from commit metadata.
         author_name: Author name from commit metadata.
         committer_email: Committer email from commit metadata.
         committer_name: Committer name from commit metadata.
+
     """
 
     author_email: str
@@ -24,7 +28,8 @@ class CommitSignature:
 
 @dataclass(frozen=True, slots=True)
 class RepositoryCommitCount:
-    """Per-repository commit counting result.
+    """
+    Per-repository commit counting result.
 
     Attributes:
         full_name: Repository identifier in `owner/repo` form.
@@ -32,6 +37,7 @@ class RepositoryCommitCount:
         commit_count: Number of matching commits in this repository.
         status: Processing status (`ok` or `skipped`).
         error: Optional error/skip description.
+
     """
 
     full_name: RepositoryName
@@ -43,7 +49,8 @@ class RepositoryCommitCount:
 
 @dataclass(frozen=True, slots=True)
 class ProfileCommitCountResult:
-    """Aggregated commit-count result for one profile query.
+    """
+    Aggregated commit-count result for one profile query.
 
     Attributes:
         total_commits: Sum of matching commits across scanned repositories.
@@ -52,6 +59,7 @@ class ProfileCommitCountResult:
         started_at: UTC timestamp when counting started.
         finished_at: UTC timestamp when counting finished.
         repo_results: Per-repository counting results.
+
     """
 
     total_commits: int

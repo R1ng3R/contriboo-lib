@@ -1,3 +1,5 @@
+"""Runtime settings for contriboo integrations and limits."""
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -6,7 +8,8 @@ from .exceptions import ContribooConfigurationError
 
 @dataclass(frozen=True, slots=True)
 class ContribooSettings:
-    """Configuration container for contriboo runtime behavior.
+    """
+    Configuration container for contriboo runtime behavior.
 
     Attributes:
         github_token: Optional GitHub token used for authenticated API calls.
@@ -16,6 +19,7 @@ class ContribooSettings:
         git_timeout_sec: Timeout for git CLI commands in seconds.
         max_search_pages: Max number of GitHub commit-search pages to read.
         workspace_dir: Optional directory for temporary clone workspace.
+
     """
 
     github_token: str | None = None
@@ -27,18 +31,20 @@ class ContribooSettings:
     workspace_dir: Path | None = None
 
     def __post_init__(self) -> None:
-        """Validate settings values after dataclass initialization.
+        """
+        Validate settings values after dataclass initialization.
 
         Raises:
             ContribooConfigurationError: If any numeric setting is out of valid range.
+
         """
         if self.http_timeout_sec <= 0:
-            raise ContribooConfigurationError("http_timeout_sec must be > 0")
+            raise ContribooConfigurationError.invalid_http_timeout()
         if self.http_retries <= 0:
-            raise ContribooConfigurationError("http_retries must be > 0")
+            raise ContribooConfigurationError.invalid_http_retries()
         if self.http_retry_delay_sec < 0:
-            raise ContribooConfigurationError("http_retry_delay_sec must be >= 0")
+            raise ContribooConfigurationError.invalid_http_retry_delay()
         if self.git_timeout_sec <= 0:
-            raise ContribooConfigurationError("git_timeout_sec must be > 0")
+            raise ContribooConfigurationError.invalid_git_timeout()
         if self.max_search_pages <= 0:
-            raise ContribooConfigurationError("max_search_pages must be > 0")
+            raise ContribooConfigurationError.invalid_max_search_pages()

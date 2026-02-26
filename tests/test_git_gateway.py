@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pytest import MonkeyPatch
+import pytest
 
 from contriboo.exceptions import GitOperationError
 from contriboo.integrations.git.gateway import GitGateway
@@ -8,7 +8,8 @@ from contriboo.repository_name import RepositoryName
 
 
 def test_clone_repository_calls_git_clone(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     commands: list[list[str]] = []
 
@@ -26,21 +27,24 @@ def test_clone_repository_calls_git_clone(
 
 
 def test_iter_commit_signatures_parses_expected_format(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     def fake_run(self: GitGateway, command: list[str], cwd: Path | None = None) -> str:
         if command[:3] == ["git", "rev-parse", "--verify"]:
             return "ok"
         if command[:2] == ["git", "log"]:
             return "john@example.com\x1fjohn\x1fjohn@example.com\x1fjohn"
-        raise GitOperationError("unexpected")
+        msg = "unexpected"
+        raise GitOperationError(msg)
 
     monkeypatch.setattr(GitGateway, "_run", fake_run)
 
     gateway = GitGateway(git_timeout_sec=120)
-    branch = gateway.resolve_mainline_branch(Path("/tmp/repo"))
+    repository_dir = tmp_path / "repo"
+    branch = gateway.resolve_mainline_branch(repository_dir)
     signatures = list(
-        gateway.iter_commit_signatures(Path("/tmp/repo"), branch or "main")
+        gateway.iter_commit_signatures(repository_dir, branch or "main"),
     )
 
     assert branch == "main"

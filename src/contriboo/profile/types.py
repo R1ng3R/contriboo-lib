@@ -1,5 +1,6 @@
-from typing import Literal, TypeAlias
+"""Common type aliases used by profile analysis layer."""
 
+from typing import Literal
 
-DaysRange: TypeAlias = int | Literal["all"]
+type DaysRange = int | Literal["all"]
 """Allowed period argument: positive day count or `"all"` for full history."""

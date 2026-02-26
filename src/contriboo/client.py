@@ -1,3 +1,5 @@
+"""Public client entrypoint and default dependency wiring."""
+
 from contriboo.integrations.git.gateway import GitGateway
 from contriboo.integrations.github.requests_provider import GitHubProvider
 from contriboo.profile.service import ProfileAnalysisService
@@ -7,18 +9,20 @@ from contriboo.settings import ContribooSettings
 class ContribooClient:
     """Public entrypoint for contriboo services."""
 
-    __slots__ = ("_settings", "_profile_service")
+    __slots__ = ("_profile_service", "_settings")
 
     def __init__(
         self,
         settings: ContribooSettings | None = None,
         profile_service: ProfileAnalysisService | None = None,
     ) -> None:
-        """Initialize client with settings and optional injected profile service.
+        """
+        Initialize client with settings and optional injected profile service.
 
         Args:
             settings: Runtime settings for integrations and timeouts.
             profile_service: Prebuilt profile service instance for custom wiring/tests.
+
         """
         self._settings = settings or ContribooSettings()
 
@@ -42,9 +46,11 @@ class ContribooClient:
 
     @property
     def profile(self) -> ProfileAnalysisService:
-        """Return profile-analysis service.
+        """
+        Return profile-analysis service.
 
         Returns:
             ProfileAnalysisService: Service for developer profile analysis use-cases.
+
         """
         return self._profile_service
