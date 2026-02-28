@@ -106,7 +106,7 @@ class GitHubProvider(ProfileRepositoryProvider):
 
         return list(repositories.keys())
 
-    def count_followers(self, username: str) -> int:
+    def count_followers(self, username: str) -> int | None:
         """Count the number of followers for a given user."""
         """
         Args:
@@ -122,11 +122,6 @@ class GitHubProvider(ProfileRepositoryProvider):
         raw_payload = GitHubUserDTO.model_validate(
             self._get_json(path=f"/users/{username}", params={})
         )
-
-        if not isinstance(raw_payload, dict):
-            raise GitHubResponseSchemaError()
-
-        return len([raw_payload.followers_url]) or 0
 
     def _build_query(self, username: str, days: DaysRange) -> str:
         """
