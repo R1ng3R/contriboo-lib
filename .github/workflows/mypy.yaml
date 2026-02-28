@@ -17,4 +17,4 @@ jobs:
         run: uv sync
 
       - name: Run mypy
-        run: uv run mypy --strict --disallow-untyped-defs --disallow-incomplete-defs src tests
+        run: make types

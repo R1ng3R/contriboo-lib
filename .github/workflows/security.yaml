@@ -16,8 +16,5 @@ jobs:
       - name: Install deps
         run: uv sync
 
-      - name: Run bandit
-        run: uv run bandit -r src/
-
-      - name: Run pip-audit
-        run: uv run pip-audit
+      - name: Run security checks
+        run: make security

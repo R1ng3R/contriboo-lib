@@ -16,65 +16,66 @@ RUFF := $(UV) run ruff
 MYPY := $(UV) run mypy
 PYTEST := $(UV) run pytest
 
-CHECK_TOOLS = uv markdownlint-cli2
-
-define require_tools
-	@for cmd in $(CHECK_TOOLS); do \
-		if ! which $$cmd >/dev/null 2>&1; then \
-			echo "$(RED)Error: '$$cmd' is not installed. Please install it first.$(NC)"; \
-			exit 1; \
-		fi; \
-	done
-endef
-
-check: lint types format-check test
+check: lint types format-check test security
 
 .PHONY: lint
-lint:
-	$(call require_tools)
-	@echo -e "\n$(YELLOW)Running linters...$(NC)\n"
-	@$(RUFF) check src tests || true
-	@markdownlint-cli2 . || true
-	@echo -e "\n$(GREEN)Lint completed!$(NC)\n"
+lint: ruff markdownlint
+
+.PHONY: ruff
+ruff:
+	@echo -e "\n$(YELLOW)Running ruff...$(NC)\n"
+	@$(RUFF) check src tests
+
+.PHONY: markdownlint
+markdownlint:
+	@echo -e "\n$(YELLOW)Running markdownlint...$(NC)\n"
+	@which markdownlint-cli2 >/dev/null 2>&1 || { \
+		echo "$(RED)Error: 'markdownlint-cli2' is not installed. Please install it first.$(NC)"; \
+		exit 1; \
+	}
+	@markdownlint-cli2 .
 
 .PHONY: format
 format:
-	$(call require_tools)
 	@echo -e "\n$(YELLOW)Formatting code...$(NC)\n"
-	@$(RUFF) format || true
-	@$(RUFF) check --fix -s || true
-	@markdownlint-cli2 . --fix || true
+	@$(RUFF) format
+	@$(RUFF) check --fix -s
+	@which markdownlint-cli2 >/dev/null 2>&1 || { \
+		echo "$(RED)Error: 'markdownlint-cli2' is not installed. Please install it first.$(NC)"; \
+		exit 1; \
+	}
+	@markdownlint-cli2 . --fix
 	@echo -e "\n$(GREEN)Formatting completed!$(NC)\n"
 
 .PHONY: format-check
 format-check:
 	@echo -e "\n$(YELLOW)Checking formatting...$(NC)\n"
-	@$(RUFF) format --check || true
+	@$(RUFF) format --check
 	@echo -e "\n$(GREEN)Format check completed!$(NC)\n"
 
 .PHONY: types
 types:
 	@echo -e "\n$(YELLOW)Checking types...$(NC)\n"
-	@$(MYPY) --strict --disallow-untyped-defs --disallow-incomplete-defs src tests || true
+	@$(MYPY) --strict --disallow-untyped-defs --disallow-incomplete-defs src tests
 	@echo -e "\n$(GREEN)Type check completed!$(NC)\n"
 
 .PHONY: test
 test:
 	@echo -e "\n$(YELLOW)Running tests...$(NC)\n"
-	@$(PYTEST) -q || true
+	@$(PYTEST) -q
 	@echo -e "\n$(GREEN)Tests completed!$(NC)\n"
 
 .PHONY: test-cov
 test-cov:
 	@echo -e "\n$(YELLOW)Running tests with coverage...$(NC)\n"
-	@$(PYTEST) --cov=src --cov-report=term-missing || true
+	@$(PYTEST) --cov=src --cov-report=term-missing:skip-covered --cov-fail-under=70 tests/
 	@echo -e "\n$(GREEN)Coverage test completed!$(NC)\n"
 
 .PHONY: security
 security:
 	@echo -e "\n$(YELLOW)Running security checks...$(NC)\n"
-	@uv run bandit -r src/ || true
-	@uv run pip-audit || true
+	@uv run bandit -r src/
+	@uv run pip-audit
 	@echo -e "\n$(GREEN)Security checks completed!$(NC)\n"
 
 
@@ -147,7 +148,9 @@ help:
 	@printf "$(GREEN)Available targets:$(NC)\n\n"
 	@printf "$(YELLOW)Development:$(NC)\n"
 	@printf "  check                      - run lint, types, format-check, test\n"
-	@printf "  lint                       - run linters (ruff, markdownlint-cli2)\n"
+	@printf "  lint                       - run all linters (ruff, markdownlint)\n"
+	@printf "  ruff                       - run ruff checks\n"
+	@printf "  markdownlint               - run markdownlint checks\n"
 	@printf "  types                      - run mypy type check\n"
 	@printf "  format                     - format code with ruff\n"
 	@printf "  format-check               - check formatting without changes\n"

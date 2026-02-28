@@ -16,5 +16,5 @@ jobs:
       - name: Install deps
         run: uv sync
 
-      - name: Ruff lint
-        run: uv run ruff check src tests
+      - name: Run ruff
+        run: make ruff

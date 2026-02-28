@@ -17,6 +17,4 @@ jobs:
         run: uv sync
 
       - name: Run pytest
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-          uv run pytest -q
+        run: make test

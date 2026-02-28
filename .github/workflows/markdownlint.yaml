@@ -8,6 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: DavidAnson/markdownlint-cli2-action@v22
-        with:
-          fix: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Install markdownlint
+        run: sudo npm install -g markdownlint-cli2
+
+      - name: Run markdownlint
+        run: make markdownlint
