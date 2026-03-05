@@ -117,7 +117,6 @@ class GitHubProvider(ProfileRepositoryProvider):
             int: The number of followers.
 
         """
-
         raw_payload = GitHubUserDTO.model_validate(
             self._get_json(path=f"/users/{username}", params={})
         )

@@ -84,8 +84,18 @@ class ProfileAnalysisService:
         return self._build_result(started_at, repositories, repo_results)
 
     def count_followers(self, username: str) -> int | None:
-        res = self._repository_provider.count_followers(username)
-        return res
+        """
+        Count followers of this profile.
+
+        Args:
+            username: Username of the profile for which we want to find
+                the number of subscribers.
+
+        Returns:
+            res: Count of followers.
+
+        """
+        return self._repository_provider.count_followers(username)
 
     def _scan_repositories(
         self,
