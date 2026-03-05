@@ -1,21 +1,14 @@
 name: ruff
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
+  pull_request:
 
 jobs:
   quality:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
