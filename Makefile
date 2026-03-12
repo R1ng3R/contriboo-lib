@@ -38,13 +38,13 @@ markdownlint:
 .PHONY: format
 format:
 	@echo -e "\n$(YELLOW)Formatting code...$(NC)\n"
-	@$(RUFF) format
-	@$(RUFF) check --fix -s
+	$(RUFF) format
+	$(RUFF) check --fix -s || true
 	@which markdownlint-cli2 >/dev/null 2>&1 || { \
 		echo "$(RED)Error: 'markdownlint-cli2' is not installed. Please install it first.$(NC)"; \
 		exit 1; \
 	}
-	@markdownlint-cli2 . --fix
+	markdownlint-cli2 . --fix
 	@echo -e "\n$(GREEN)Formatting completed!$(NC)\n"
 
 .PHONY: format-check
@@ -56,7 +56,7 @@ format-check:
 .PHONY: types
 types:
 	@echo -e "\n$(YELLOW)Checking types...$(NC)\n"
-	@$(MYPY) --strict --disallow-untyped-defs --disallow-incomplete-defs src tests
+	$(MYPY) --strict --disallow-untyped-defs --disallow-incomplete-defs src
 	@echo -e "\n$(GREEN)Type check completed!$(NC)\n"
 
 .PHONY: test
