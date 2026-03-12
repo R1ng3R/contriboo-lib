@@ -83,7 +83,7 @@ class ProfileAnalysisService:
         )
         return self._build_result(started_at, repositories, repo_results)
 
-    def count_followers(self, username: str) -> int | None:
+    def count_followers(self, username: str) -> int:
         """
         Count followers of this profile.
 

@@ -1,4 +1,4 @@
-"""Minimal example of running profile commit counting."""
+"""Minimal example of running profile counting followers."""
 
 import logging
 import os
