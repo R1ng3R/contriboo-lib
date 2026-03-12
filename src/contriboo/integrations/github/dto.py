@@ -15,7 +15,7 @@ class GitHubUserDTO(BaseModel):
     html_url: str | None = None
     followers_url: str | None = None
     following_url: str | None = None
-    followers: int | None = None
+    followers: int
     gists_url: str | None = None
     starred_url: str | None = None
     subscriptions_url: str | None = None

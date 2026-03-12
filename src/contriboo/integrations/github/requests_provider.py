@@ -120,9 +120,7 @@ class GitHubProvider(ProfileRepositoryProvider):
         raw_payload = GitHubUserDTO.model_validate(
             self._get_json(path=f"/users/{username}", params={})
         )
-        if isinstance(raw_payload.followers, int):
-            return raw_payload.followers
-        return 0
+        return raw_payload.followers
 
     def _build_query(self, username: str, days: DaysRange) -> str:
         """
