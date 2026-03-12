@@ -29,6 +29,21 @@ class ProfileRepositoryProvider(Protocol):
             list[RepositoryName]: Unique repository names matching the author filter.
 
         """
+
+    def count_followers(
+        self,
+        username: str,
+    ) -> int:
+        """
+        Count the number of followers for a given user.
+
+        Args:
+            username: The username of the user.
+
+        Returns:
+            int: The number of followers.
+
+        """
         ...
 
 
