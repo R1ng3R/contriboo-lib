@@ -122,8 +122,7 @@ class GitHubProvider(ProfileRepositoryProvider):
         )
         if isinstance(raw_payload.followers, int):
             return raw_payload.followers
-        else:
-            return 0
+        return 0
 
     def _build_query(self, username: str, days: DaysRange) -> str:
         """
