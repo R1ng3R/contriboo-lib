@@ -60,7 +60,6 @@ class ProfileRepositoryProvider(Protocol):
         Returns:
             int: Count of lines written at last n-days.
         """
-        ...
 
 
 class GitHistoryGateway(Protocol):
